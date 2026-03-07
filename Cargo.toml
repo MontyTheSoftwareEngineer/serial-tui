@@ -1,0 +1,12 @@
+[package]
+name = "serial-tui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ratatui = "0.28"
+crossterm = "0.28"
+serialport = "4.6"
+tokio = { version = "1", features = ["sync", "rt-multi-thread", "macros"] }
+anyhow = "1"
+arboard = "3"
