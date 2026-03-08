@@ -74,6 +74,7 @@ struct App {
     active_pane: ActivePane,
     baud_selected: Option<usize>,
     history_scroll: usize,
+    history_selected: usize,
     visual_mode: VisualMode,
     cursor_line: usize,
     cursor_col: usize,
@@ -106,6 +107,7 @@ impl App {
             active_pane: ActivePane::Devices,
             baud_selected: None,
             history_scroll: 0,
+            history_selected: 0,
             visual_mode: VisualMode::Normal,
             cursor_line: 0,
             cursor_col: 0,
@@ -307,9 +309,9 @@ impl App {
     }
 
     fn load_history_to_input(&mut self) {
-        // history_scroll points to the top visible item, use that
+        // Use the selected history item
         if !self.cmd_history.is_empty() {
-            let idx = self.cmd_history.len() - 1 - self.history_scroll;
+            let idx = self.cmd_history.len() - 1 - self.history_selected;
             if let Some(cmd) = self.cmd_history.get(idx) {
                 self.tx_input = cmd.clone();
             }
@@ -696,7 +698,7 @@ fn main() -> Result<()> {
                                 app.prev_pane();
                             }
                             KeyCode::Char('q') if app.active_pane != ActivePane::Input => break,
-                            KeyCode::Char('?') => {
+                            KeyCode::Char('?') if app.active_pane != ActivePane::Input => {
                                 app.show_about = true;
                             }
                             KeyCode::Char('v') => {
@@ -763,9 +765,17 @@ fn main() -> Result<()> {
                                     }
                                 }
                                 ActivePane::History => {
-                                    let max_scroll = app.cmd_history.len().saturating_sub(1);
-                                    if app.history_scroll < max_scroll {
-                                        app.history_scroll += 1;
+                                    let history_len = app.cmd_history.len();
+                                    if history_len > 0 {
+                                        let max_selected = history_len.saturating_sub(1);
+                                        if app.history_selected < max_selected {
+                                            app.history_selected += 1;
+                                            // Scroll only if selection goes beyond visible area
+                                            // Visible area shows 10 items starting from history_scroll
+                                            if app.history_selected >= app.history_scroll + 10 {
+                                                app.history_scroll = app.history_selected - 9;
+                                            }
+                                        }
                                     }
                                 }
                                 ActivePane::Input => {
@@ -795,8 +805,12 @@ fn main() -> Result<()> {
                                     }
                                 }
                                 ActivePane::History => {
-                                    if app.history_scroll > 0 {
-                                        app.history_scroll -= 1;
+                                    if app.history_selected > 0 {
+                                        app.history_selected -= 1;
+                                        // Scroll only if selection goes above visible area
+                                        if app.history_selected < app.history_scroll {
+                                            app.history_scroll = app.history_selected;
+                                        }
                                     }
                                 }
                                 ActivePane::Input => {}
@@ -1178,7 +1192,8 @@ fn render_main(f: &mut Frame, area: Rect, app: &App) {
             .take(10)
             .enumerate()
             .map(|(i, cmd)| {
-                let style = if history_active && i == 0 {
+                let item_index = app.history_scroll + i;
+                let style = if history_active && item_index == app.history_selected {
                     Style::default()
                         .fg(Color::Yellow)
                         .add_modifier(ratatui::style::Modifier::BOLD)
