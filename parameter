@@ -1,0 +1,36 @@
+   Compiling serial-tui v0.1.0 (/home/hpham/MVE/repos/serial-tui)
+   Compiling serial-tui v0.1.0 (/home/hpham/MVE/repos/serial-tui)
+error[E0597]: `visible_lines` does not live long enough
+   --> src/main.rs:839:13
+    |
+828 |     let display_lines: Vec<Line> =
+    |         ------------- borrow later stored here
+...
+833 |             let visible_lines: Vec<(usize, String)> = all_lines_vec[start_idx..end_idx]
+    |                 ------------- binding `visible_lines` declared here
+...
+839 |             visible_lines
+    |             ^^^^^^^^^^^^^ borrowed value does not live long enough
+...
+912 |         } else {
+    |         - `visible_lines` dropped here while still borrowed
+
+error[E0597]: `visible_lines` does not live long enough
+   --> src/main.rs:839:13
+    |
+828 |     let display_lines: Vec<Line> =
+    |         ------------- borrow later stored here
+...
+833 |             let visible_lines: Vec<(usize, String)> = all_lines_vec[start_idx..end_idx]
+    |                 ------------- binding `visible_lines` declared here
+...
+839 |             visible_lines
+    |             ^^^^^^^^^^^^^ borrowed value does not live long enough
+...
+912 |         } else {
+    |         - `visible_lines` dropped here while still borrowed
+
+For more information about this error, try `rustc --explain E0597`.
+For more information about this error, try `rustc --explain E0597`.
+error: could not compile `serial-tui` (bin "serial-tui") due to 1 previous error
+error: could not compile `serial-tui` (bin "serial-tui") due to 1 previous error
