@@ -270,23 +270,28 @@ impl App {
     }
 
     fn send_command(&mut self) {
-        if !self.tx_input.is_empty() {
-            if let Some(tx) = &self.tx_sender {
-                let cmd = self.tx_input.clone();
-                let _ = tx.send(cmd);
+        if let Some(tx) = &self.tx_sender {
+            let cmd = self.tx_input.clone();
+            let _ = tx.send(cmd);
+            if !self.tx_input.is_empty() {
                 self.rx_buffer.push_str(&format!("> {}\n", self.tx_input));
+            } else {
+                self.rx_buffer.push_str("> \n");
             }
-            
+        }
+        
+        // Only add non-empty commands to history
+        if !self.tx_input.is_empty() {
             // Remove command from history if it already exists, then add to end
             let cmd = self.tx_input.clone();
             self.cmd_history.retain(|c| c != &cmd);
             self.cmd_history.push(cmd);
-            
-            self.history_index = None;
-            self.history_scroll = 0;
-            self.tx_input.clear();
             save_history(&self.cmd_history);
         }
+        
+        self.history_index = None;
+        self.history_scroll = 0;
+        self.tx_input.clear();
     }
 
     fn send_from_history(&mut self) {
@@ -701,10 +706,10 @@ fn main() -> Result<()> {
                             KeyCode::Char('?') if app.active_pane != ActivePane::Input => {
                                 app.show_about = true;
                             }
-                            KeyCode::Char('v') => {
+                            KeyCode::Char('v') if app.active_pane != ActivePane::Input => {
                                 app.enter_visual_mode();
                             }
-                            KeyCode::Char('r') => {
+                            KeyCode::Char('r') if app.active_pane != ActivePane::Input => {
                                 app.refresh_devices().ok();
                             }
                             KeyCode::Char('c')
@@ -737,7 +742,7 @@ fn main() -> Result<()> {
                                 app.active_pane = ActivePane::Baud;
                                 app.baud_selected = Some(app.baud_rate);
                             }
-                            KeyCode::Char('j') | KeyCode::Down => {
+                            KeyCode::Char('j') if app.active_pane != ActivePane::Input => {
                                 if in_custom_baud_mode {
                                     // In custom baud mode, 'j' types 'j'
                                     app.custom_baud.push('j');
@@ -784,7 +789,7 @@ fn main() -> Result<()> {
                                 }
                             }
                         }}
-                            KeyCode::Char('k') | KeyCode::Up => {
+                            KeyCode::Char('k') if app.active_pane != ActivePane::Input => {
                                 if in_custom_baud_mode {
                                     // In custom baud mode, 'k' types 'k'
                                     app.custom_baud.push('k');
@@ -819,6 +824,70 @@ fn main() -> Result<()> {
                             KeyCode::Char('l') if app.active_pane == ActivePane::History => {
                                 app.load_history_to_input();
                                 app.active_pane = ActivePane::Input;
+                            }
+                            KeyCode::Down if app.active_pane != ActivePane::Input => {
+                                match app.active_pane {
+                                    ActivePane::Devices => {
+                                        if let Some(idx) = app.selected_device {
+                                            if idx < app.devices.len() - 1 {
+                                                app.selected_device = Some(idx + 1);
+                                            }
+                                        } else if !app.devices.is_empty() {
+                                            app.selected_device = Some(0);
+                                        }
+                                    }
+                                    ActivePane::Baud => {
+                                        if let Some(idx) = app.baud_selected {
+                                            if idx < BAUD_RATES.len() - 1 {
+                                                app.baud_selected = Some(idx + 1);
+                                            } else if idx == BAUD_RATES.len() - 1 {
+                                                app.baud_selected = Some(BAUD_RATES.len());
+                                            }
+                                        } else {
+                                            app.baud_selected = Some(0);
+                                        }
+                                    }
+                                    ActivePane::History => {
+                                        let history_len = app.cmd_history.len();
+                                        if history_len > 0 {
+                                            let max_selected = history_len.saturating_sub(1);
+                                            if app.history_selected < max_selected {
+                                                app.history_selected += 1;
+                                                if app.history_selected >= app.history_scroll + 10 {
+                                                    app.history_scroll = app.history_selected - 9;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ActivePane::Input => {}
+                                }
+                            }
+                            KeyCode::Up if app.active_pane != ActivePane::Input => {
+                                match app.active_pane {
+                                    ActivePane::Devices => {
+                                        if let Some(idx) = app.selected_device {
+                                            if idx > 0 {
+                                                app.selected_device = Some(idx - 1);
+                                            }
+                                        }
+                                    }
+                                    ActivePane::Baud => {
+                                        if let Some(idx) = app.baud_selected {
+                                            if idx > 0 {
+                                                app.baud_selected = Some(idx - 1);
+                                            }
+                                        }
+                                    }
+                                    ActivePane::History => {
+                                        if app.history_selected > 0 {
+                                            app.history_selected -= 1;
+                                            if app.history_selected < app.history_scroll {
+                                                app.history_scroll = app.history_selected;
+                                            }
+                                        }
+                                    }
+                                    ActivePane::Input => {}
+                                }
                             }
                             KeyCode::Enter => match app.active_pane {
                                 ActivePane::Baud => {
