@@ -296,7 +296,7 @@ impl App {
 
     fn send_from_history(&mut self) {
         if !self.cmd_history.is_empty() {
-            let idx = self.cmd_history.len() - 1 - self.history_scroll;
+            let idx = self.cmd_history.len() - 1 - self.history_selected;
             if let Some(cmd) = self.cmd_history.get(idx).cloned() {
                 if let Some(tx) = &self.tx_sender {
                     let _ = tx.send(cmd.clone());
