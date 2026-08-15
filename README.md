@@ -71,61 +71,91 @@ serial-tui
 
 ### Interface Layout
 
+#### Connection Dialog (Initial Screen)
+The app starts with a vertically stacked connection configuration dialog:
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ [DEVICES]              Serial-TUI              [Connected]  │
-├─────────────┬─────────────────────────────────────────────────┤
-│             │                                               │
-│  Devices    │              RX/TX Output                     │
-│  --------   │                                               │
-│  > USB0     │  > Hello                                      │
-│    USB1     │  World!                                       │
-│             │  > status                                     │
-│             │  OK                                           │
-│             │                                               │
-├─────────────┼─────────────────────────────────────────────────┤
-│  Baud Rate  │              Command History                  │
-│  ---------  │                                               │
-│  > 115200   │  1. help                                      │
-│             │  2. status                                    │
-├─────────────┴─────────────────────────────────────────────────┤
-│ Input: _                                                    │
+│          Serial-TUI - Connection Configuration              │
 ├─────────────────────────────────────────────────────────────┤
-│ Help: Tab/Shift+Tab=switch | Enter=send | ?=help | q=quit  │
+│ Devices (Tab cycles, j/k or arrows, c=connect, r=refresh)  │
+│  > /dev/ttyUSB0 (USB Serial Device)                        │
+│    /dev/ttyUSB1 (USB Serial Device)                        │
+│    /dev/ttyACM0 (Arduino Mega)                             │
+├─────────────────────────────────────────────────────────────┤
+│ Baud Rate                                                   │
+│    9600                                                     │
+│  > 115200                                                   │
+│    230400                                                   │
+├─────────────────────────────────────────────────────────────┤
+│ Data Bits: > 8 bits                                         │
+├─────────────────────────────────────────────────────────────┤
+│ Stop Bits: > 1                                              │
+├─────────────────────────────────────────────────────────────┤
+│ Parity: > None                                              │
+├─────────────────────────────────────────────────────────────┤
+│ Press 'c' to connect | 'r' to refresh | 'q' to quit        │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+#### Connected Interface
+After connecting, the interface switches to vertically stacked operational view:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Serial Data (Tab to History, v=visual mode)                │
+│  > Hello                                                    │
+│  World!                                                     │
+│  > status                                                   │
+│  OK                                                         │
+│  > help                                                     │
+│  Available commands: help, status, reset                    │
+├─────────────────────────────────────────────────────────────┤
+│ Command History (Tab to Input, j/k, Enter to send)         │
+│  3. reset                                                   │
+│  2. status                                                  │
+│  1. help                                                    │
+├─────────────────────────────────────────────────────────────┤
+│ Input: > _                                                  │
+├─────────────────────────────────────────────────────────────┤
+│ Input captures typing; Esc leaves input focus              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key UI Features:**
+- **Vertical navigation**: Tab moves down through panes, Shift+Tab moves up
+- **Connection dialog first**: Configure all settings before connecting
+- **Compact connected view**: Device and baud stay in the status bar, not a separate pane
+- **Focused workflow**: Each screen optimized for its task
 
 ## ⌨️ Keyboard Shortcuts
 
 ### Global Commands
 | Key | Action |
 |-----|--------|
-| `Tab` | Switch to next pane |
-| `Shift+Tab` | Switch to previous pane |
-| `q` | Quit (except in Input pane) |
+| `Tab` | Move to next pane (down) |
+| `Shift+Tab` | Move to previous pane (up) |
 | `?` | Show about dialog |
-| `v` | Enter visual mode |
+| `v` | Enter visual mode (when connected) |
+
+### Connection Dialog
+| Key | Action |
+|-----|--------|
+| `Tab` / `Shift+Tab` | Cycle through: Device → Baud → Data Bits → Stop Bits → Parity |
+| `j` / `k` / `↓` / `↑` | Navigate within current setting |
+| `c` | Connect with selected settings |
 | `r` | Refresh device list |
+| `q` | Quit application |
+| `0-9` | Enter custom baud rate (when on Custom option) |
+| `Backspace` | Delete digit (custom baud) |
 
-### Devices Pane
+### Connected Interface
 | Key | Action |
 |-----|--------|
-| `j` / `↓` | Move selection down |
-| `k` / `↑` | Move selection up |
-| `c` | Connect to selected device |
-| `d` | Disconnect from device |
-| `b` | Switch to Baud pane |
-
-### Baud Rate Pane
-| Key | Action |
-|-----|--------|
-| `j` / `↓` | Select next baud rate |
-| `k` / `↑` | Select previous baud rate |
-| `c` | Connect with selected baud |
-| `d` | Disconnect |
-| `Enter` | Confirm baud selection |
-| `0-9` | Enter custom baud rate |
-| `Backspace` | Delete digit |
+| `Tab` / `Shift+Tab` | Cycle through: Serial Data → History → Input |
+| `d` | Disconnect (returns to connection dialog) |
+| `q` | Quit application when not in Input |
+| `v` | Enter visual mode (in Serial Data pane) |
 
 ### History Pane
 | Key | Action |
@@ -141,6 +171,8 @@ serial-tui
 | Type | Enter command text |
 | `Backspace` | Delete character |
 | `Enter` | Send command |
+| `Tab` / `Shift+Tab` | Switch panes while input is focused |
+| `Esc` | Leave input focus |
 
 ### Visual Mode
 | Key | Action |
@@ -155,12 +187,14 @@ serial-tui
 
 ## 🛠️ Configuration
 
-### History File
+### Configuration Directory
 
-Command history is automatically saved to:
+Command history and configuration files are stored in:
 ```
-~/.serial-tui_history
+~/.config/serial-tui/history
 ```
+
+The directory is automatically created on first run if it doesn't exist.
 
 ### Supported Device Types
 
@@ -173,9 +207,13 @@ Serial-TUI automatically detects and filters:
 
 ### Serial Port Settings
 
-- **Data bits**: 8
-- **Stop bits**: 1
-- **Parity**: None
+Configurable in the connection dialog:
+- **Baud rates**: 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600, or custom
+- **Data bits**: 5, 6, 7, 8 (default: 8)
+- **Stop bits**: 1, 1.5, 2 (default: 1)
+- **Parity**: None, Odd, Even (default: None)
+
+Fixed settings:
 - **Flow control**: None
 - **Line termination**: `\r\n` (automatically appended)
 - **Read timeout**: 50ms
